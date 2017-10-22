@@ -1,20 +1,21 @@
 # -*- coding: latin-1 -*-
-#Compatível com 3.4 e 2.7
-try:
-    import requests
-    REQUEST = True
-except:
-    import urllib.request
-    REQUEST = False
-    
-from bs4 import BeautifulSoup as bs
-import threading as td
-#from BeautifulSoup import BeautifulSoup as bs
+#Compatível com 2.7 e 3.*
 
-try:
+#Autor: Israel Gomes
+#Data Upload: 23/10/2017
+#Data Criação: 23/06/2016
+from sys import version
+if version[0] == "2":#Importação compatível com py 2.7
     from Tkinter import Tk, Toplevel, Label, LabelFrame, Button, Entry, Frame, StringVar, TOP, LEFT, CENTER, W
-except:
+    import requests
+
+if version[0] == "3":#Importação compatível com py 3
     from tkinter import Tk, Toplevel, Label, LabelFrame, Button, Entry, Frame, StringVar, TOP, LEFT, CENTER, W
+    import urllib.request
+    
+from bs4 import BeautifulSoup as bs # Importação da lib para mineração de dados
+#from BeautifulSoup import BeautifulSoup as bs
+import threading as td
     
 class RastreadorCorreios():
     def __init__(self, codigo):
@@ -22,22 +23,21 @@ class RastreadorCorreios():
         self.url = "http://websro.correios.com.br/sro_bin/txect01$.QueryList?P_LINGUA=001&P_TIPO=001"
         self.param = {"P_COD_UNI":self.codigo}
     
-    def getRespostaRastreio(self):
-        if REQUEST: return requests.get(self.url, params=self.param).text
+    def getRespostaRastreio(self):#Obtem resposta do servidor
+        if version[0] == "2": return requests.get(self.url, params=self.param).text
         else:
             url = urllib.request.Request(url=self.url+'&'+urllib.parse.urlencode(self.param))
             return urllib.request.urlopen(url).read()
     
-    def criarLinhasTabela(self, resposta):
-        bsObj = bs(resposta, "html.parser")
-        self._corpo = corpo = bsObj.body
-        self._tabela = tabela = corpo.find(name="table")
+    def criarLinhasTabela(self, resposta):#Separa todos os estados registrados pelo codigo de rastreio
+        bsObj = bs(resposta, "html.parser")#Cria um objeto Beautiful Soup
+        self._corpo = corpo = bsObj.body#identifica o corpo do html
+        self._tabela = tabela = corpo.find(name="table")#identifica a tabela dentro do corpo
         try:
             trs = tabela.findAll("td") #Coleta todas as tds com todas as tags
             return [trTag.get_text() for trTag in trs][3:] # Os tipos listas do BeautifulSoup nao tem nenhum metodo fora os normais de lista
         except AttributeError:
-            #print "O modulo findall não foi encontrado"
-            #print dir(tabela)
+            print "O modulo findall não foi encontrado"
             return []
         
 
@@ -71,7 +71,7 @@ class RastreadorCorreios():
 
         return linhas_format
 
-class Interface(Frame):
+class Interface(Frame):#Interface Grafica com Tkinter
     def __init__(self, master, titulo="App", msg="", *args, **kwargs):
         Frame.__init__(self, master, *args, **kwargs)
         self.master = master
@@ -88,7 +88,7 @@ class Interface(Frame):
         botaoEntradaFrame.pack(side=TOP, pady=10)
         
         self.codigoEntrada = StringVar()
-        self.codigoEntrada.set("PG148828108BR")
+        self.codigoEntrada.set("")#Codigo de rastreio para testes dentro da string
         Entry(botaoEntradaFrame, textvar=self.codigoEntrada, font=("Arial", 11), width=15).pack(side=LEFT, padx=5)
         Button(botaoEntradaFrame, text="Rastrear", width=10, command=self.gerarLabels).pack(side=LEFT, padx=5)
         Button(botaoEntradaFrame, text="Limpar", width=10, command=self.limpar).pack(side=LEFT, padx=5)
@@ -111,9 +111,9 @@ class Interface(Frame):
         dataCteStateFrame = Frame(master=frame, background=bg)
         dataCteStateFrame.pack(side=TOP, expand=True, fill="x")
         
-        Label(dataCteStateFrame, text=track[0], background=bg, justify=CENTER).grid(row=0, column=0, ipadx=5, sticky=W)#Data
-        Label(dataCteStateFrame, text=track[1], background=bg, justify=CENTER).grid(row=0, column=1, ipadx=5, sticky=W)#cte ou local
-        Label(dataCteStateFrame, text=track[2], background=bg, justify=CENTER).grid(row=0, column=2, ipadx=5, sticky=W)#Situcação
+        Label(dataCteStateFrame, text=track[0], background=bg, justify=CENTER).grid(row=0, column=0, ipadx=5, sticky=W)#Widget para Data
+        Label(dataCteStateFrame, text=track[1], background=bg, justify=CENTER).grid(row=0, column=1, ipadx=5, sticky=W)#Widget para cte ou local
+        Label(dataCteStateFrame, text=track[2], background=bg, justify=CENTER).grid(row=0, column=2, ipadx=5, sticky=W)#Widget para Situcação
             
     def gerarLabels(self):
         self.apagarMsgNaoEncontrado()
@@ -132,8 +132,7 @@ class Interface(Frame):
         trackList = rc.formatarLinhas(rc.criarLinhasTabela(rc.getRespostaRastreio()))
         if trackList:
             for index, track in enumerate(trackList):
-                #(((data, cte, situacao), local))
-                
+                #track retorna a estrutura de dados (((data, cte, situacao), local))
                 if len(track) == 2:#(data, cte, situacao), local)
                     self.construirLinha(frame=labelsFrame, track=track[0], bg="#008B8B")
                     Label(self.labelsFrame, text=track[1]+'\n'.upper(), background="#7FFFD4").pack(side=TOP, fill="x")#local
@@ -146,12 +145,12 @@ class Interface(Frame):
             self.exibirMsgNaoEncontrado()
         stop.set()
 
-    def limpar(self):
+    def limpar(self):#Limpar Entrada de código
         self.codigoEntrada.set("")
 
-    def removerLabels(self):
-        try: self.labelsFrame.destroy()
-        except: pass#print "Erro ao destruir"
+    def removerLabels(self):#Remover todas as linhas de widgets geradas para cada estado do codigo
+        try: self.labelsFrame.destroy()#destroy todos os widgets exibidos nas linhas de estado do codigo
+        except: pass
         
         
 tk = Tk()
