@@ -1,2 +1,6 @@
-# rastreador
-Projeto de interface gráfica para rastrear encomendas com aplicação Python
+# Rastreador dos Correios
+Projeto de interface grafica para rastrear encomendas com aplicacao Python
+
+# Dependencias
+    BeautifulSoup
+
